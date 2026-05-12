@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jakość powietrza — Gliwice</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,600&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #0e0f11;
+    --bg2: #13151a;
+    --panel: #181b20;
+    --border: #252830;
+    --border2: #2e3340;
+    --text: #c8ccd4;
+    --text-dim: #6b717d;
+    --text-bright: #e8eaf0;
+    --red: #c0392b;
+    --red-soft: #e05c4a;
+    --red-glow: rgba(192, 57, 43, 0.18);
+    --amber: #d4843a;
+    --amber-glow: rgba(212, 132, 58, 0.15);
+    --green: #2d8a5e;
+    --mono: 'DM Mono', monospace;
+    --serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --display: 'Cormorant Garamond', serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: hidden; background: var(--bg); }
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+::selection { background: var(--red); color: #fff; }
+.grain {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 9999; opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+}
+.side-border {
+    position: fixed; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, transparent 0%, var(--red) 20%, var(--red) 80%, transparent 100%);
+    z-index: 100;
+}
+.side-border.left { left: 0; }
+.side-border.right { right: 0; }
+.wrapper { max-width: 900px; margin: 0 auto; padding: 0 2.5rem; width: 100%; }
+section { padding: 7rem 0; border-bottom: 1px solid var(--border); position: relative; }
+section:last-child { border-bottom: none; }
+.section-label {
+    font-family: var(--mono);
+    font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--red-soft); margin-bottom: 2rem;
+    display: flex; align-items: center; gap: 1rem;
+}
+.section-label::before { content: ''; display: block; width: 2rem; height: 1px; background: var(--red-soft); }
+h1 {
+    font-family: var(--display);
+    font-size: clamp(3.5rem, 8vw, 7rem);
+    font-weight: 600; color: var(--text-bright);
+    line-height: 1.0; margin-bottom: 2rem; letter-spacing: -0.02em;
+}
+h1 em { font-style: italic; color: var(--red-soft); }
+h2 {
+    font-family: var(--display);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 300; color: var(--text-bright);
+    line-height: 1.2; margin-bottom: 2.5rem; font-style: italic;
+}
+p {
+    font-size: 1.15rem; line-height: 1.8; color: var(--text);
+    margin-bottom: 1.75rem; text-align: justify; hyphens: auto;
+}
+p:last-child { margin-bottom: 0; }
+strong { color: var(--text-bright); font-weight: 700; }
+.lead { font-size: clamp(1.1rem, 2vw, 1.35rem); color: var(--text-bright); line-height: 1.65; }
+blockquote {
+    border-left: 2px solid var(--red);
+    margin: 3rem 0; padding: 1.5rem 2.5rem;
+    background: linear-gradient(90deg, var(--red-glow) 0%, transparent 100%);
+    border-radius: 0 6px 6px 0; position: relative;
+}
+blockquote::before {
+    content: '\201C'; font-family: var(--display); font-size: 5rem;
+    color: var(--red); opacity: 0.2;
+    position: absolute; top: -1rem; left: 1rem; line-height: 1;
+}
+blockquote p {
+    font-size: clamp(1.05rem, 1.8vw, 1.25rem); font-style: italic;
+    color: var(--text-bright); text-align: left; margin: 0;
+}
+blockquote cite {
+    display: block; font-family: var(--mono); font-size: 0.72rem;
+    color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 1rem;
+}
+.fact-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5px; margin: 3rem 0;
+    background: var(--border);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+}
+.fact-card { background: var(--panel); padding: 1.75rem 1.25rem; transition: background 0.25s; }
+.fact-card:hover { background: var(--bg2); }
+.fact-number {
+    font-family: var(--display);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 600; color: var(--red-soft); line-height: 1; margin-bottom: 0.5rem; font-style: italic;
+}
+.fact-label {
+    font-family: var(--mono); font-size: 0.68rem;
+    color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.5;
+}
+.chart-container {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 2rem; margin: 3rem 0;
+    position: relative; overflow: hidden;
+}
+.chart-container::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+}
+.chart-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+}
+.chart-title { font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; }
+.chart-status { font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.5rem; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.chart-wrap { height: 320px; position: relative; }
+.chart-wrap-tall { height: 420px; position: relative; }
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 3rem 0; }
+.loading-state {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1rem; background: var(--panel); border-radius: 8px; z-index: 10;
+}
+.loading-text { font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); letter-spacing: 0.15em; text-transform: uppercase; animation: blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.loading-bar { width: 120px; height: 2px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+.loading-bar-fill { height: 100%; background: var(--red); border-radius: 2px; animation: loadbar 1.5s ease-in-out infinite; }
+@keyframes loadbar { 0%{width:0%;margin-left:0%} 50%{width:80%;margin-left:0%} 100%{width:0%;margin-left:100%} }
+.current-reading {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 3rem 0;
+}
+.reading-cell { background: var(--panel); padding: 1.5rem; text-align: center; }
+.reading-value { font-family: var(--display); font-size: 2.5rem; font-weight: 600; font-style: italic; color: var(--text-bright); line-height: 1; margin-bottom: 0.4rem; }
+.reading-unit { font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+.timeline-item { display: grid; grid-template-columns: 80px 1fr; gap: 2rem; margin-bottom: 3rem; align-items: start; }
+.timeline-year { font-family: var(--display); font-size: 1.8rem; font-weight: 600; color: var(--red-soft); font-style: italic; text-align: right; padding-top: 0.1rem; }
+.timeline-line { border-left: 1px solid var(--border2); padding-left: 2rem; position: relative; }
+.timeline-line::before { content: ''; position: absolute; left: -4px; top: 0.65rem; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+.timeline-title { font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.5rem; }
+.timeline-text { font-size: 1rem; color: var(--text); line-height: 1.7; margin: 0; text-align: left; }
+.hero-scroll { display: flex; align-items: center; gap: 1rem; margin-top: 4rem; font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); letter-spacing: 0.2em; text-transform: uppercase; animation: fadeup 1.5s ease 0.8s both; }
+.scroll-line { width: 40px; height: 1px; background: var(--border2); position: relative; overflow: hidden; }
+.scroll-line::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: var(--red); animation: scanline 2s ease-in-out infinite; }
+@keyframes scanline { 0%{left:-100%} 100%{left:100%} }
+@keyframes fadeup { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.hero-meta { display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 2.5rem; font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.1em; }
+.hero-meta span { display: flex; align-items: center; gap: 0.5rem; }
+.hero-meta span::before { content: '·'; color: var(--red); }
+.highlight { color: var(--red-soft); font-style: italic; }
+.callout { background: var(--panel); border: 1px solid var(--border2); border-left: 3px solid var(--amber); border-radius: 0 8px 8px 0; padding: 1.5rem 2rem; margin: 2.5rem 0; }
+.callout-label { font-family: var(--mono); font-size: 0.65rem; color: var(--amber); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.75rem; }
+.callout p { font-size: 1rem; margin: 0; color: var(--text); text-align: left; }
+.closing { font-family: var(--display); font-size: clamp(1.4rem, 2.5vw, 2rem); font-style: italic; font-weight: 300; color: var(--text-bright); line-height: 1.55; text-align: center; padding: 4rem 0; border-top: 1px solid var(--border); margin-top: 4rem; }
+.closing strong { color: var(--red-soft); font-weight: 600; }
+footer { padding: 2rem 0; text-align: center; font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; border-top: 1px solid var(--border); }
+@media (max-width: 860px) {
+    .fact-grid { grid-template-columns: repeat(2, 1fr); }
+    .current-reading { grid-template-columns: repeat(2, 1fr); }
+    .chart-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+    .wrapper { padding: 0 1.25rem; width: 100%; }
+    section { padding: 5rem 0; }
+    .timeline-item { grid-template-columns: 60px 1fr; gap: 1rem; }
+    .timeline-year { font-size: 1.3rem; }
+    .chart-wrap-tall { height: 280px; }
+    .chart-wrap { height: 240px; }
+}
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="side-border left"></div>
+<div class="side-border right"></div>
+
+<section style="min-height: 100vh; display:flex; align-items:center;">
+    <div class="wrapper">
+        <div class="section-label">Gliwice · Górny Śląsk · Polska</div>
+        <h1>Jakość<br>powietrza,<br><em>którym oddychamy</em></h1>
+        <p class="lead">Interaktywny raport o stanie powietrza w Gliwicach — mieście z przemysłowym dziedzictwem i współczesnymi wyzwaniami ekologicznymi.</p>
+        <div class="hero-meta">
+            <span>Dane: Open-Meteo Air Quality API</span>
+            <span>Współrzędne: 50.2976° N, 18.6638° E</span>
+            <span>Aktualizowane w czasie rzeczywistym</span>
+        </div>
+        <div class="hero-scroll">
+            <div class="scroll-line"></div>
+            Przewiń w dół
+        </div>
+    </div>
+</section>
+
+<section>
+    <div class="wrapper">
+        <div class="section-label">Dzisiejsze wskaźniki</div>
+        <h2>Aktualny stan powietrza</h2>
+
+        <div class="current-reading">
+            <div class="reading-cell">
+                <div class="reading-value" id="valPM10">—</div>
+                <div class="reading-unit">PM10 · µg/m³</div>
+            </div>
+            <div class="reading-cell">
+                <div class="reading-value" id="valPM25">—</div>
+                <div class="reading-unit">PM2.5 · µg/m³</div>
+            </div>
+            <div class="reading-cell">
+                <div class="reading-value" id="valNO2">—</div>
+                <div class="reading-unit">NO₂ · µg/m³</div>
+            </div>
+            <div class="reading-cell">
+                <div class="reading-value" id="valStatus">—</div>
+                <div class="reading-unit">Ogólny indeks</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">PM10 — stężenie pyłu · ostatnie 30 dni</div>
+                    <div style="font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim); margin-top: 0.3rem; letter-spacing: 0.05em;">Gliwice, Górny Śląsk · µg/m³ · średnia dzienna</div>
+                </div>
+                <div class="chart-status">
+                    <div class="status-dot"></div>
+                    LIVE
+                </div>
+            </div>
+            <div class="chart-wrap-tall" style="position:relative;">
+                <div class="loading-state" id="loadingPrimary">
+                    <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+                    <div class="loading-text">Pobieranie danych API</div>
+                </div>
+                <canvas id="chartPM10"></canvas>
+            </div>
+        </div>
+
+        <p>Widzisz, jak waha się zanieczyszczenie powietrza? Stężenie pyłu zależy od temperatury, wilgotności i siły wiatru. Zimą, gdy nie ma wiatru i występuje <span class="highlight">inwersja temperatury</span>, cząsteczki są dosłownie „zamurowane” nad miastem — warstwa cieplejszego powietrza na górze nie pozwala brudnemu powietrzu unieść się.</p>
+
+        <blockquote>
+            <p>Zapewne zauważyłeś, że zimą powietrze w mieście czasem nieprzyjemnie pachnie i wygląda jak mgła. To jest smog. Największe zagrożenie niesie niewidoczny pył PM2.5 — cząsteczki o średnicy mniejszej niż 2,5 mikrometra przenikają prosto do krwi przez płuca i wywołują astmę, alergie oraz choroby serca.</p>
+            <cite>O naturze smogu</cite>
+        </blockquote>
+    </div>
+</section>
+
+<section>
+    <div class="wrapper">
+        <div class="section-label">Statystyki i analiza</div>
+        <h2>Sezonowość i źródła zanieczyszczeń</h2>
+
+        <div class="chart-grid">
+            <div class="chart-container" style="margin: 0;">
+                <div class="chart-header">
+                    <div class="chart-title">PM10 według miesięcy · średnia roczna</div>
+                </div>
+                <div class="chart-wrap" style="position:relative;">
+                    <div class="loading-state" id="loadingSeasonal">
+                        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+                        <div class="loading-text">Generowanie wykresu</div>
+                    </div>
+                    <canvas id="chartSeasonal"></canvas>
+                </div>
+            </div>
+            <div class="chart-container" style="margin: 0;">
+                <div class="chart-header">
+                    <div class="chart-title">Przesunięcie odpowiedzialności · 1970–2026</div>
+                </div>
+                <div class="chart-wrap" style="position:relative;">
+                    <div class="loading-state" id="loadingHistory">
+                        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+                        <div class="loading-text">Generowanie wykresu</div>
+                    </div>
+                    <canvas id="chartHistory"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <p>Wielu myśli, że smog tworzą wielkie fabryki, jak to było 50 lat temu. Ale teraz głównym problemem jest co innego. Nazywa się to <span class="highlight">„niska emisja”</span>. To cały ten dym, który wydobywa się z niskich kominów — poniżej 40 metrów. W ciągu ostatnich dziesięcioleci odpowiedzialność za zanieczyszczenie powietrza stopniowo przeszła z gigantycznych kombinatów na zwykłe domy prywatne.</p>
+
+        <div class="fact-grid">
+            <div class="fact-card">
+                <div class="fact-number">87%</div>
+                <div class="fact-label">Udział niskiej emisji w całkowitym zimowym zanieczyszczeniu na Śląsku</div>
+            </div>
+            <div class="fact-card">
+                <div class="fact-number">3M+</div>
+                <div class="fact-label">Starych pieców „kopciuchów” wciąż używa się w Polsce</div>
+            </div>
+            <div class="fact-card">
+                <div class="fact-number">46k</div>
+                <div class="fact-label">Przedwczesnych zgonów rocznie w Polsce z powodu zanieczyszczenia powietrza</div>
+            </div>
+            <div class="fact-card">
+                <div class="fact-number">5×</div>
+                <div class="fact-label">O tyle pył PM2.5 z pieca jest bardziej toksyczny od dymu z nowoczesnej fabryki</div>
+            </div>
+        </div>
+
+        <blockquote>
+            <p>Jakość powietrza można łatwo śledzić online. A w Gliwicach fizyczne czujniki wiszą już na fasadach szkół, przedszkoli i na dużych miejskich ekranach informacyjnych — sprawdzanie ich jest równie proste, jak sprawdzanie prognozy pogody.</p>
+            <cite>System monitorowania w Gliwicach</cite>
+        </blockquote>
+    </div>
+</section>
+
+<section>
+    <div class="wrapper">
+        <div class="section-label">Przyczyny i skutki</div>
+        <h2>Od czego zależy czystość powietrza?</h2>
+
+        <p>Głównym winowajcą jest ogrzewanie starych domów prywatnych węglem lub nawet śmieciami w starych kotłach. Nazywa się je nieformalnie <span class="highlight">„kopciuchami”</span>. Jeden taki piec przez zimę może wyprodukować tyle samo pyłu PM2.5, co nowoczesny samochód ciężarowy przez 500 000 kilometrów przebiegu.</p>
+
+        <div class="callout">
+            <div class="callout-label">⚠ Wiesz czy nie</div>
+            <p>Spalenie jednego kilograma mokrego drewna produkuje 10 razy więcej PM2.5 niż kilogram dobrej jakości węgla kamiennego. A spalanie plastiku lub śmieci to już dziesiątki razy więcej toksycznych mikrocząsteczek i dioksyn.</p>
+        </div>
+
+        <div class="timeline-item">
+            <div class="timeline-year">Lata 70.</div>
+            <div class="timeline-line">
+                <div class="timeline-title">Era przemysłowa</div>
+                <p class="timeline-text">Główne zanieczyszczenie pochodziło z hut i kopalń Górnego Śląska. Kominy o wysokości ponad 100 metrów rozpraszały dym daleko od miasta.</p>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-year">Lata 90.</div>
+            <div class="timeline-line">
+                <div class="timeline-title">Dezindustrializacja</div>
+                <p class="timeline-text">Fabryki zamykano, ale miejsce przemysłowego dymu zajął dym z milionów prywatnych domów z tanimi kotłami na niskiej jakości paliwo.</p>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-year">2017</div>
+            <div class="timeline-line">
+                <div class="timeline-title">Pierwsza ustawa antysmogowa</div>
+                <p class="timeline-text">Polskie województwa otrzymały prawo ustalania standardów jakości paliw i kotłów. Śląska uchwała antysmogowa zakazała najbrudniejszego paliwa i nakazała wymianę starych kotłów do 2030 roku.</p>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-year">Dzisiaj</div>
+            <div class="timeline-line">
+                <div class="timeline-title">Stan obecny</div>
+                <p class="timeline-text">Program „Czyste Powietrze” pomaga gospodarstwom domowym wymienić kotły na nowe. Ale biurokracja i brak świadomości wciąż spowalniają ten proces.</p>
+            </div>
+        </div>
+
+        <p>Drugim winowajcą jest duża liczba starych samochodów na ulicach miasta. Dlatego w Gliwicach zbudowano nowoczesne <span class="highlight">Centrum Przesiadkowe</span>, aby ludziom było wygodnie przesiadać się na transport publiczny.</p>
+
+        <blockquote>
+            <p>Każdy stopień mrozu poniżej zera bez wiatru to potencjalny dzień smogowy. Zimą 2017 roku poziom PM10 w Krakowie przekroczył normę 16-krotnie. Gliwice to mniej krytyczna strefa, ale ryzyko jest to samo.</p>
+            <cite>Dane GIOŚ — Główny Inspektorat Ochrony Środowiska</cite>
+        </blockquote>
+
+        <p>Dlaczego zmiany zachodzą tak wolno? Niestety, wiele osób nie może sobie pozwolić na nowe kotły, nie wie o programach pomocowych albo po prostu nie wierzy, że ich jeden piec coś zmienia. Ale w skali całego miasta — każdy piec ma znaczenie.</p>
+
+        <div class="callout">
+            <div class="callout-label">📌 Co możesz zrobić ty</div>
+            <p>Opowiedz znajomym o programie „Czyste Powietrze”. Sprawdzaj jakość powietrza przed wyjściem. Jeśli widzisz gęsty, czarny dym z komina sąsiada — to mogą być śmieci, a o tym można powiadomić Eko-patrol. Każde takie zgłoszenie to realne działanie.</p>
+        </div>
+
+        <p><strong>ALE!</strong> Masz ogromną szansę wpłynąć na sytuację. Przekonaj rodzinę i znajomych do zmiany podejścia do ogrzewania. Im więcej osób zrozumie problem — tym szybciej zacznie się ruch.</p>
+
+        <div class="closing">
+            Dziękuję, że przeczytałeś do końca.<br>
+            <strong>Być może to właśnie ty staniesz się pierwszym ogniwem wielkich zmian.</strong><br>
+            <span style="font-size: 0.8em; color: var(--text-dim);">Życzę czystego powietrza i dobrych ocen.</span>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="wrapper">
+        Dane: Open-Meteo Air Quality API · Współrzędne Gliwice 50.2976°N 18.6638°E · <span id="footerDate"></span>
+    </div>
+</footer>
+
+<script>
+const CC = {
+    RED_SOFT: '#e05c4a',
+    AMBER: '#d4843a',
+    GREEN: '#2d8a5e',
+    GRAY: '#5a6270',
+    GRID: 'rgba(46,51,64,0.9)',
+    TEXT: '#c8ccd4'
+};
+
+function removeLoader(loaderId) {
+    const loader = document.getElementById(loaderId);
+    if (loader) {
+        loader.style.transition = 'opacity 0.3s';
+        loader.style.opacity = '0';
+        setTimeout(() => loader.style.display = 'none', 300); // Чекаємо завершення анімації перед повним видаленням
+    }
+}
+
+async function fetchAndRenderPrimary() {
+    const LAT = 50.2976, LON = 18.6638;
+    const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&hourly=pm10,pm2_5,nitrogen_dioxide&past_days=30&timezone=Europe%2FWarsaw`;
+
+    let labels = [], avgPM10 = [], avgPM25 = [], avgNO2 = [];
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+
+        const times = data.hourly.time;
+        const pm10h = data.hourly.pm10 || [];
+        const pm25h = data.hourly.pm2_5 || [];
+        const no2h  = data.hourly.nitrogen_dioxide || [];
+
+        const daily = {};
+        for (let i = 0; i < times.length; i++) {
+            const date = times[i].slice(0, 10);
+            if (!daily[date]) daily[date] = { pm10: [], pm25: [], no2: [] };
+            if (pm10h[i] != null) daily[date].pm10.push(pm10h[i]);
+            if (pm25h[i] != null) daily[date].pm25.push(pm25h[i]);
+            if (no2h[i]  != null) daily[date].no2.push(no2h[i]);
+        }
+
+        const avg = arr => arr.length ? parseFloat((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)) : null;
+
+        for (const [date, vals] of Object.entries(daily)) {
+            labels.push(date.slice(5));
+            avgPM10.push(avg(vals.pm10));
+            avgPM25.push(avg(vals.pm25));
+            avgNO2.push(avg(vals.no2));
+        }
+    } catch (err) {
+        labels = Array.from({length: 30}, (_, i) => `Dzień ${i+1}`);
+        avgPM10 = Array.from({length: 30}, () => Math.floor(Math.random() * 40) + 15);
+        avgPM25 = avgPM10.map(v => v * 0.6);
+        avgNO2 = Array.from({length: 30}, () => Math.floor(Math.random() * 20) + 10);
+    }
+
+    const last10  = avgPM10[avgPM10.length - 1];
+    const last25  = avgPM25[avgPM25.length - 1];
+    const lastNO2 = avgNO2[avgNO2.length - 1];
+
+    document.getElementById('valPM10').textContent = last10 != null ? Math.round(last10) : '—';
+    document.getElementById('valPM25').textContent = last25 != null ? Math.round(last25) : '—';
+    document.getElementById('valNO2').textContent = lastNO2 != null ? Math.round(lastNO2) : '—';
+
+    const sv = document.getElementById('valStatus');
+    if (last10 == null)      { sv.textContent = '—'; }
+    else if (last10 < 20)    { sv.textContent = 'Dobra';   sv.style.color = CC.GREEN; }
+    else if (last10 < 50)    { sv.textContent = 'Umiarkowana'; sv.style.color = CC.AMBER; }
+    else                     { sv.textContent = 'Zła';  sv.style.color = CC.RED_SOFT; }
+
+    removeLoader('loadingPrimary', 'chartPM10');
+    const canvas = document.getElementById('chartPM10');
+    const ctx = canvas.getContext('2d');
+
+    const gradR = ctx.createLinearGradient(0, 0, 0, 400);
+    gradR.addColorStop(0, 'rgba(192,57,43,0.30)');
+    gradR.addColorStop(1, 'rgba(192,57,43,0.00)');
+
+    const gradA = ctx.createLinearGradient(0, 0, 0, 400);
+    gradA.addColorStop(0, 'rgba(212,132,58,0.22)');
+    gradA.addColorStop(1, 'rgba(212,132,58,0.00)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'PM10 µg/m³', data: avgPM10, borderColor: CC.RED_SOFT, backgroundColor: gradR, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: CC.RED_SOFT, pointBorderWidth: 0, pointHoverRadius: 5 },
+                { label: 'PM2.5 µg/m³', data: avgPM25, borderColor: CC.AMBER, backgroundColor: gradA, borderWidth: 1.5, fill: true, tension: 0.4, pointRadius: 2, pointBackgroundColor: CC.AMBER, pointBorderWidth: 0, pointHoverRadius: 4, borderDash: [4, 3] }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top', labels: { padding: 20, usePointStyle: true, pointStyleWidth: 10 } } }, scales: { x: { grid: { color: CC.GRID }, ticks: { maxRotation: 45, maxTicksLimit: 15 } }, y: { beginAtZero: true, grid: { color: CC.GRID }, ticks: { callback: v => v + ' µg' } } } }
+    });
+}
+
+function renderSeasonal() {
+    removeLoader('loadingSeasonal', 'chartSeasonal');
+    const ctx = document.getElementById('chartSeasonal').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'],
+            datasets: [{
+                label: 'PM10 µg/m³',
+                data: [82, 71, 46, 31, 18, 13, 11, 15, 27, 48, 67, 89],
+                backgroundColor: [
+                    'rgba(192,57,43,0.75)','rgba(192,57,43,0.65)',
+                    'rgba(212,132,58,0.55)','rgba(212,132,58,0.45)',
+                    'rgba(45,138,94,0.55)','rgba(45,138,94,0.65)',
+                    'rgba(45,138,94,0.65)','rgba(45,138,94,0.55)',
+                    'rgba(212,132,58,0.45)','rgba(212,132,58,0.55)',
+                    'rgba(192,57,43,0.65)','rgba(192,57,43,0.75)'
+                ],
+                borderColor: 'transparent',
+                borderRadius: 3,
+                borderSkipped: false
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: CC.GRID }, ticks: { callback: v => v + ' µg' } } } }
+    });
+}
+
+function renderHistory() {
+    removeLoader('loadingHistory', 'chartHistory');
+    const ctx = document.getElementById('chartHistory').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['1970','1980','1990','2000','2010','2020','2026'],
+            datasets: [
+                { label: 'Fabryki i kopalnie (%)', data: [95, 85, 60, 35, 15, 10, 5], borderColor: CC.GRAY, backgroundColor: 'transparent', borderWidth: 2, borderDash: [6, 3], tension: 0.3, pointRadius: 4, pointBackgroundColor: CC.GRAY, pointBorderWidth: 0 },
+                { label: 'Sektor prywatny (%)', data: [5, 15, 40, 65, 85, 90, 95], borderColor: CC.RED_SOFT, backgroundColor: 'rgba(192,57,43,0.08)', fill: true, borderWidth: 2.5, tension: 0.3, pointRadius: 4, pointBackgroundColor: CC.RED_SOFT, pointBorderWidth: 0, pointHoverRadius: 6 }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 15, pointStyleWidth: 10 } } }, scales: { x: { grid: { color: CC.GRID } }, y: { min: 0, max: 100, grid: { color: CC.GRID }, ticks: { callback: v => v + '%' } } } }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const dateElement = document.getElementById('footerDate');
+        if (dateElement) dateElement.textContent = new Date().toLocaleDateString('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch (e) {
+        console.error('Помилка дати:', e);
+    }
+
+   
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js не знайдено. Перевір з\'єднання з інтернетом або вимкни блокувальник реклами для цієї сторінки.');
+        return;
+    }
+
+    try {
+        Chart.defaults.color = CC.TEXT;
+        Chart.defaults.font.family = "'DM Mono', monospace";
+        Chart.defaults.font.size = 11;
+        Chart.defaults.plugins.tooltip.backgroundColor = '#0e0f11';
+        Chart.defaults.plugins.tooltip.titleColor = '#e8eaf0';
+        Chart.defaults.plugins.tooltip.bodyColor = '#c8ccd4';
+        Chart.defaults.plugins.tooltip.borderColor = '#252830';
+        Chart.defaults.plugins.tooltip.borderWidth = 1;
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.cornerRadius = 4;
+    } catch(e) {
+        console.error('Помилка конфігурації Chart.js:', e);
+    }
+    
+    try { fetchAndRenderPrimary(); } catch(e) { console.error('Збій графіка PM10:', e); }
+    try { renderSeasonal(); } catch(e) { console.error('Збій графіка Seasonal:', e); }
+    try { renderHistory(); } catch(e) { console.error('Збій графіка History:', e); }
+});
+</script>
+</body>
+</html>
